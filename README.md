@@ -1,7 +1,7 @@
 chip_avr_asm_lib
 ================
 
-ASM files for Chip's AVR library
+ASM files for Chip's AVR library  
 
  ------------------- | --------------------------------------------------------  
 I2C_Master_lib | ATmega164P based interrtup driven I2C Master code.  
