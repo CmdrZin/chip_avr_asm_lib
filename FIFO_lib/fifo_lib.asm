@@ -6,23 +6,9 @@
  *
  * Target: ATmega164P
  *
- * Basic utilities for FIFO support.
+ * Basic utilities for FIFO supprt.
  *
  */
-
-.equ	SER_BUFF_SIZE	= 32
-
-
-.DSEG
-// Common struct used by FIFO utilities.
-ser_in_buff:		.BYTE	SER_BUFF_SIZE
-ser_in_fifo_head:	.BYTE	1
-ser_in_fifo_tail:	.BYTE	1
-
-ser_out_buff:		.BYTE	SER_BUFF_SIZE
-ser_out_fifo_head:	.BYTE	1
-ser_out_fifo_tail:	.BYTE	1
-
 
 .CSEG
 /* **** Utilites **** */
@@ -33,7 +19,7 @@ ser_out_fifo_tail:	.BYTE	1
  *				r19		buffer size
  *
  * output reg:	r17		Data
- *				R18		Data valid..0:valid..1:no data
+ *				r18 	Data valid..0:valid..1:no data
  *
  * head - in index to FIFO = *(buffer+SIZE)
  * tail - out index to FIFO = *(buffer+SIZE+1)
@@ -63,13 +49,13 @@ fifo_get:
 ;	
 	ld		r16, Y					; head
 	ld		r18, Z					; tail
-	cp		r16, r18				; test for empty
+	cp		r16, r18				; test for empty..head=tail
 	brne	fg001					; skip if data	
-	ldi		r18, 1					; no data
+	ldi		r18, 1					; NO data
 	rjmp	fg_exit					; EXIT
 ;
 fg001:
-// 16 bit add..X + tail
+// 16 bit add tail index..X + tail
 	add		XL, r18
 	clr		r16
 	adc		XH, r16
@@ -78,12 +64,12 @@ fg001:
 	inc		r18
 // check for wrap around
 	cp		r18, r19
-	brne	fg002
-// at end
+	brlt	fg002					; more robust than brne
+// at end..reset
 	clr		r18
 fg002:
 	st		Z, r18
-	clr		r18
+	clr		r18						; data valid
 ;
 fg_exit:
 	pop		ZH
@@ -100,10 +86,11 @@ fg_exit:
  * Put one byte into FIFO
  *
  * NOTE: Overflow tested. If FULL, don't store.
- * TODO: Set or return error OV=1???
+ * TODO: Set error OV=1???
  *
- * input reg:	X			*buffer
- *				r19			buffer size
+ * input reg:	X		*buffer
+ *				r19		buffer size
+ *				r17		Data
  *
  * output reg:	none
  *
@@ -111,10 +98,10 @@ fg_exit:
  * tail - out index to FIFO = *(buffer+SIZE+1)
  *
  * NOTE: Called from INTR service routine. SAVE regs.
+ * NOTE: Can only hold SIZE-1 byte due to OV check.
  */
 fifo_put:
 	push	r16
-	push	r17
 	push	r18
 	push	r19
 	push	XL
@@ -134,17 +121,23 @@ fifo_put:
 	inc		ZL
 	add		ZL, XL
 	adc		ZH, XH
-;	
+; check for space
 	ld		r16, Y					; head
 	inc		r16						; test end
+; check for wrap around
+	cp		r16, r19
+	brlt	fp003
+// at end
+	clr		r16						; reset
+fp003:
 	ld		r18, Z					; tail
 	cp		r16, r18				; test for full
-	brne	fp001					; skip if data
+	brne	fp001					; skip if space..head will not equal tail after save.
 ; error OV
 	rjmp	fp_exit
 ;
 fp001:
-	dec		r16
+	ld		r16, Y
 	add		XL, r16
 	clr		r18
 	adc		XH, r18
@@ -153,7 +146,7 @@ fp001:
 	inc		r16
 // check for wrap around
 	cp		r16, r19
-	brne	fp002
+	brlt	fp002
 // at end
 	clr		r16						; reset
 fp002:
@@ -168,6 +161,5 @@ fp_exit:
 	pop		XL
 	pop		r19
 	pop		r18
-	pop		r17
 	pop		r16
 	ret
