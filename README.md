@@ -1,5 +1,6 @@
 chip_avr_asm_lib
 ================
+These libraries are written in AVR assembly code for the ATmega164P, ATmega328P, and similar devices.  
 
 ASM files for Chip's AVR library  
 
