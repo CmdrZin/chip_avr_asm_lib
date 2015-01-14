@@ -12,3 +12,4 @@ ASM files for Chip's AVR library
 | Conversions_lib | Generic data format conversion utilites: Bin2BCD, etc.  
 | FIFO_lib | General purpose FIFO utilities.
 | Serial_lib | Serial RS-232 port support.  
+| Stepper_lib | Four phase, Five wire stepper motor driver.  
