@@ -14,11 +14,17 @@
  *       B /
  *        C D
  *
+ * rev: 14jan15 - Reset port at 1ms test to pulse motor coils instead of steady current to reduce power.
+ *
  */
 
-.equ	STEPPER_DELAY_COUNT	= 10			; min = 5
+.equ	STEPPER_DELAY_COUNT	= 10			; min = 5..sets speed
+.equ	STEPPER_ON_TIME_MS	= 3				; min = 3 for 5volt drive.
 
 .equ	STEPPER_PHASE_STOP	= 16
+
+.equ	STEPPER_ONE_REVOLUTION = 2039
+
 
 .equ	STEPPER_FWD_PHASE_A	 = 0
 .equ	STEPPER_FWD_PHASE_AC = 1
@@ -57,6 +63,8 @@ stepper_delay:		.BYTE	1			; service time delay * 10ms
 stepper_status:		.BYTE	1			; last phase serviced..use dir for next phase
 stepper_direction:	.BYTE	1			; 0: Stop
 stepper_speed:		.BYTE	1			; adj delay,,TODO
+stepper_count:		.BYTE	2			; number of steps. dec back to zero. 100 is about 15 deg
+stepper_duration:	.BYTE	1			; length of coil ON time in ms.
 
 
 .CSEG
@@ -84,8 +92,13 @@ stepper_init:
 	ldi		r17, STEPPER_DIR_FWD
 	call	stepper_set_dir
 ;
-	ldi		R16, 100
-	sts		stepper_speed, R16				; TODO
+	ldi		r16, 100
+	sts		stepper_speed, r16				; TODO
+;
+	ldi		r16, low(STEPPER_ONE_REVOLUTION)
+	sts		stepper_count, r16
+	ldi		r16, high(STEPPER_ONE_REVOLUTION)
+	sts		stepper_count+1, r16
 ;
 	ret
 
@@ -130,6 +143,7 @@ stepper_init_io:
  * else
  * 	--delay then Exit
  * Service phase
+ * Dec count and set back to STOP at 0.
  *
  */
 stepper_service:
@@ -138,6 +152,17 @@ stepper_service:
 ;
 	cbi		GPIOR0, STEPPER_1MS_TIC	; clear tic10ms flag set by interrup
 // Run service
+	lds		r16, stepper_duration
+	tst		r16
+	breq	ssm_skip100				; already done?
+	dec		r16
+	sts		stepper_duration, r16
+	brne	ssm_skip100
+; Reset port to reduce power.
+	clr		r17
+	call	stp_update_io
+;
+ssm_skip100:
 	lds		r16, stepper_delay
 	dec		r16
 	sts		stepper_delay, r16
@@ -191,6 +216,23 @@ ssm_skip20:
 ;
 ssm_update:
 	sts		stepper_status, r16
+; Update count
+	lds		r16, stepper_count
+	dec		r16
+	sts		stepper_count, r16
+	brne	ssm_exit
+; Zero check
+	lds		r16, stepper_count+1
+	tst		r16
+	breq	ssm_skip30
+; Adjust upper
+	dec		r16
+	sts		stepper_count+1, r16
+	rjmp	ssm_exit
+;
+ssm_skip30:
+	ldi		r17, STEPPER_DIR_STOP
+	call	stepper_set_dir
 ;
 ssm_exit:
 	ret
@@ -239,6 +281,10 @@ ssd_exit:
  */
 stp_update_io:
 	out		PORTD, r17
+; set ON time
+	ldi		r16, STEPPER_ON_TIME_MS
+	sts		stepper_duration, r16
+;
 	ret
 
 /*
