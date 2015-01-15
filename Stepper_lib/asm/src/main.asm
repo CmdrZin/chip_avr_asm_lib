@@ -84,6 +84,9 @@
 	rjmp	trap_intr
 
 
+.DSEG
+main_flag:		.BYTE	1
+
 .CSEG
 RESET:
 ; setup SP
@@ -96,6 +99,8 @@ RESET:
 	out		MCUCR, R16
 	out		MCUCR, R16
 ;
+	clr		r16
+	sts		main_flag, r16
 	call	st_init_tmr0
 	call	stepper_init		; set up stepper I/O and state.
 ;
@@ -104,6 +109,23 @@ RESET:
 main_m:
 ;
 	call	stepper_service
+;
+	lds		r16, stepper_direction
+	cpi		r16, STEPPER_DIR_STOP
+	brne	m_skip01
+	lds		r16, main_flag
+	tst		r16
+	brne	m_skip01
+;
+	inc		r16
+	sts		main_flag, r16
+;
+	ldi		r16, low(STEPPER_ONE_REVOLUTION)
+	sts		stepper_count, r16
+	ldi		r16, high(STEPPER_ONE_REVOLUTION)
+	sts		stepper_count+1, r16
+	ldi		r17, STEPPER_DIR_REV
+	call	stepper_set_dir
 ;
 m_skip01:
 ;

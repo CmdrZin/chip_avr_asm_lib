@@ -19,30 +19,24 @@
  */
 
 .equ	STEPPER_DELAY_COUNT	= 10			; min = 5..sets speed
-.equ	STEPPER_ON_TIME_MS	= 3				; min = 3 for 5volt drive.
+.equ	STEPPER_ON_TIME_MS	= 5				; min = 5 for 5volt drive.
 
 .equ	STEPPER_PHASE_STOP	= 16
 
 .equ	STEPPER_ONE_REVOLUTION = 2039
+;;.equ	STEPPER_ONE_REVOLUTION = 300
 
 
-.equ	STEPPER_FWD_PHASE_A	 = 0
-.equ	STEPPER_FWD_PHASE_AC = 1
-.equ	STEPPER_FWD_PHASE_C  = 2
-.equ	STEPPER_FWD_PHASE_CB = 3
-.equ	STEPPER_FWD_PHASE_B  = 4
-.equ	STEPPER_FWD_PHASE_BD = 5
-.equ	STEPPER_FWD_PHASE_D  = 6
-.equ	STEPPER_FWD_PHASE_DA = 7
+.equ	STEPPER_STATE_0	 = 0
+.equ	STEPPER_STATE_1	 = 1
+.equ	STEPPER_STATE_2	 = 2
+.equ	STEPPER_STATE_3	 = 3
+.equ	STEPPER_STATE_4	 = 4
+.equ	STEPPER_STATE_5	 = 5
+.equ	STEPPER_STATE_6	 = 6
+.equ	STEPPER_STATE_7	 = 7
+.equ	STEPPER_STATE_OFF = 8
 
-.equ	STEPPER_REV_PHASE_A  = 8
-.equ	STEPPER_REV_PHASE_AD = 9
-.equ	STEPPER_REV_PHASE_D  = 10
-.equ	STEPPER_REV_PHASE_DB = 11
-.equ	STEPPER_REV_PHASE_B  = 12
-.equ	STEPPER_REV_PHASE_BC = 13
-.equ	STEPPER_REV_PHASE_C  = 14
-.equ	STEPPER_REV_PHASE_CA = 15
 
 .equ	STEPPER_DIR_STOP	= 0
 .equ	STEPPER_DIR_FWD		= 1
@@ -60,7 +54,7 @@
 
 .DSEG
 stepper_delay:		.BYTE	1			; service time delay * 10ms
-stepper_status:		.BYTE	1			; last phase serviced..use dir for next phase
+stepper_state:		.BYTE	1			; last statre serviced..use dir for next state
 stepper_direction:	.BYTE	1			; 0: Stop
 stepper_speed:		.BYTE	1			; adj delay,,TODO
 stepper_count:		.BYTE	2			; number of steps. dec back to zero. 100 is about 15 deg
@@ -84,8 +78,8 @@ stepper_init:
 	ldi		R16, STEPPER_DELAY_COUNT
 	sts		stepper_delay, R16
 ;
-	ldi		R16, STEPPER_PHASE_STOP
-	sts		stepper_status, R16
+	ldi		R16, STEPPER_STATE_0
+	sts		stepper_state, R16
 ;
 ;;	ldi		r17, STEPPER_DIR_STOP
 ;;	ldi		r17, STEPPER_DIR_REV
@@ -173,60 +167,58 @@ ssm_skip00:
 	ldi		r16, STEPPER_DELAY_COUNT
 	sts		stepper_delay, r16
 ; Service Stepper Motor
-;;	call	stepper_init_io				; restore IO
-;
-	lds		r17, stepper_status
+	lds		r17, stepper_state
+	andi	r17, 0x07				; limit range in case of glitch.
 	call	stp_get_phase
 	call	stp_update_io
 ; Update
-	
 	lds		r16, stepper_direction
 	cpi		r16, STEPPER_DIR_FWD
 	brne	ssm_skip10
 ; FWD
-	lds		r16, stepper_status
+	lds		r16, stepper_state
 	inc		r16
-	cpi		r16, STEPPER_FWD_PHASE_DA	; last phase
+	cpi		r16, STEPPER_STATE_7	; last phase
 	brsh	ssm_skip01
 	rjmp	ssm_update
 ;
 ssm_skip01:
 	breq	ssm_update
-	ldi		r16, STEPPER_FWD_PHASE_A	; reset to beginning
+	ldi		r16, STEPPER_STATE_0	; reset to beginning
 	rjmp	ssm_update
 ;
 ssm_skip10:
 	cpi		r16, STEPPER_DIR_REV
 	brne	ssm_skip20
 ; REV
-	lds		r16, stepper_status
-	inc		r16
-	cpi		r16, STEPPER_REV_PHASE_CA	; last phase
-	brsh	ssm_skip11
+	lds		r16, stepper_state
+	cpi		r16, STEPPER_STATE_0
+	breq	ssm_skip11
+	dec		r16
 	rjmp	ssm_update
 ;
 ssm_skip11:
-	breq	ssm_update
-	ldi		r16, STEPPER_REV_PHASE_A	; reset to beginning
+	ldi		r16, STEPPER_STATE_7	; reset to end
 	rjmp	ssm_update
 
 ssm_skip20:
 ; STOP
-	clr		r16
+	lds		r16, stepper_state		; no change to state.
 ;
 ssm_update:
-	sts		stepper_status, r16
+	sts		stepper_state, r16
+;
 ; Update count
 	lds		r16, stepper_count
-	dec		r16
+	lds		r17, stepper_count+1
+	or		r17, r16
+	breq	ssm_skip30				; done
+;
+	subi	r16, 1
 	sts		stepper_count, r16
-	brne	ssm_exit
-; Zero check
+	clr		r17
 	lds		r16, stepper_count+1
-	tst		r16
-	breq	ssm_skip30
-; Adjust upper
-	dec		r16
+	sbc		r16, r17
 	sts		stepper_count+1, r16
 	rjmp	ssm_exit
 ;
@@ -243,36 +235,6 @@ ssm_exit:
  */
 stepper_set_dir:
 	sts		stepper_direction, r17
-; Inialize Phase Status
-	cpi		r17, STEPPER_DIR_STOP
-	brne	ssd_skip10
-; STOP
-	clr		r17
-	rjmp	ssd_update
-;
-ssd_skip10:
-	cpi		r17, STEPPER_DIR_FWD
-	brne	ssd_skip20
-; FORWARD
-	ldi		r17, STEPPER_FWD_PHASE_A	; FWD-A
-	rjmp	ssd_update
-;
-ssd_skip20:
-	cpi		R17, STEPPER_DIR_REV
-	brne	ssd_skip30
-; REVERSE
-	ldi		r17, STEPPER_REV_PHASE_A	; REV-A
-	rjmp	ssd_update
-;
-ssd_skip30:
-	ldi		R17, STEPPER_DIR_STOP	; default
-	sts		stepper_direction, r17
-	clr		r17
-;
-ssd_update:
-	sts		stepper_status, r17
-;
-ssd_exit:
 	ret
 
 /*
@@ -305,16 +267,11 @@ stp_get_phase:
 	ret
 ;
 /* 2 bytes per entry 0-7, 8-15, 16=STOP */
+/* Keep 8 points to test with later. */
 stepper_io_data:
-.db		STEPPER_COIL_2b|STEPPER_COIL_1b, STEPPER_COIL_1b|STEPPER_COIL_4b	; FWD-BA, FWD-AD
-.db		STEPPER_COIL_4b|STEPPER_COIL_3b, STEPPER_COIL_3b|STEPPER_COIL_2b	; FWD-DC, FWD-CB
-.db		STEPPER_COIL_2b|STEPPER_COIL_1b, STEPPER_COIL_1b|STEPPER_COIL_4b	; FWD-BA, FWD-AD
-.db		STEPPER_COIL_4b|STEPPER_COIL_3b, STEPPER_COIL_3b|STEPPER_COIL_2b	; FWD-DC, FWD-CB
-
-.db		STEPPER_COIL_1b|STEPPER_COIL_2b, STEPPER_COIL_2b|STEPPER_COIL_3b	; REV-AB, REV-BC
-.db		STEPPER_COIL_3b|STEPPER_COIL_4b, STEPPER_COIL_4b|STEPPER_COIL_1b	; REV-CD, REV-DA
-.db		STEPPER_COIL_1b|STEPPER_COIL_2b, STEPPER_COIL_2b|STEPPER_COIL_3b	; REV-AB, REV-BC
-.db		STEPPER_COIL_3b|STEPPER_COIL_4b, STEPPER_COIL_4b|STEPPER_COIL_1b	; REV-CD, REV-DA
-
+.db		STEPPER_COIL_2b|STEPPER_COIL_1b, STEPPER_COIL_1b|STEPPER_COIL_4b	; BA, AD
+.db		STEPPER_COIL_4b|STEPPER_COIL_3b, STEPPER_COIL_3b|STEPPER_COIL_2b	; DC, CB
+.db		STEPPER_COIL_2b|STEPPER_COIL_1b, STEPPER_COIL_1b|STEPPER_COIL_4b	; BA, AD
+.db		STEPPER_COIL_4b|STEPPER_COIL_3b, STEPPER_COIL_3b|STEPPER_COIL_2b	; DC, CB
 .db		0x00, 0x00								; STOP
 
