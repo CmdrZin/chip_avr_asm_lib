@@ -2,12 +2,28 @@
  * FIFO Library
  *
  * org: 11/03/2014
+ * rev: 02/23/2015
  * auth: Nels "Chip" Pearson
  *
  * Target: ATmega164P
  *
  * Basic utilities for FIFO supprt.
  *
+ */
+
+/*  EXAMPLE of BUFFER definition
+ * .equ	SER_BUFF_SIZE	= 32
+ * 
+ * .DSEG
+ * Common struct used by FIFO utility.
+ * ser_in_buff:			.BYTE	SER_BUFF_SIZE
+ * ser_in_fifo_head:	.BYTE	1
+ * ser_in_fifo_tail:	.BYTE	1
+ * 
+ * ser_out_buff:		.BYTE	SER_BUFF_SIZE
+ * ser_out_fifo_head:	.BYTE	1
+ * ser_out_fifo_tail:	.BYTE	1
+ * .CSEG
  */
 
 .CSEG
@@ -27,6 +43,11 @@
  * NOTE: Called from INTR service routine. SAVE regs.
  */
 fifo_get:
+; Save SREG
+	push	R0
+	in		R0, SREG
+	push	R0
+;
 	push	r16
 	push	r19
 	push	XL
@@ -80,6 +101,11 @@ fg_exit:
 	pop		XL
 	pop		r19
 	pop		r16
+; Restore SREG
+	pop		R0
+	out		SREG, R0
+	pop		R0
+;
 	ret
 
 /*
@@ -101,6 +127,11 @@ fg_exit:
  * NOTE: Can only hold SIZE-1 byte due to OV check.
  */
 fifo_put:
+; Save SREG
+	push	R0
+	in		R0, SREG
+	push	R0
+;
 	push	r16
 	push	r18
 	push	r19
@@ -162,4 +193,9 @@ fp_exit:
 	pop		r19
 	pop		r18
 	pop		r16
+; Restore SREG
+	pop		R0
+	out		SREG, R0
+	pop		R0
+;
 	ret
