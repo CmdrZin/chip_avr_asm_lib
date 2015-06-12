@@ -14,3 +14,4 @@ ASM files for Chip's AVR library
 | FIFO_lib | General purpose FIFO utilities.
 | Serial_lib | Serial RS-232 port support.  
 | Stepper_lib | Four phase, Five wire stepper motor driver.  
+| LCD_lib | C compatible ASM LCD.  
