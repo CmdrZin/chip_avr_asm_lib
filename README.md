@@ -15,3 +15,4 @@ ASM files for Chip's AVR library
 | Serial_lib | Serial RS-232 port support.  
 | Stepper_lib | Four phase, Five wire stepper motor driver.  
 | LCD_lib | C compatible ASM LCD.  
+| Flash_tables | ASM utilities to allow C code to access arrays of structs in Flash.  
