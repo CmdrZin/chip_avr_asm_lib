@@ -4,5 +4,10 @@ CUlib_ChangeList.rtf
 
 10-22-2014		Conversion_lib_Release_0
 bin2bcd_10_4	Converts 10bit left shited binary to 4 digit BCD. Used for 10bit ADC data.
-12-13-2020		Upgrade docs. Upgrade conversion_util.asm.
+12-13-2020		Upgrade docs.
+bin2bcd_10_4	Converts 10bit left shited binary to 4 digit BCD. Used for 10bit ADC data.
+conversions_C_util - C callable bin2bcd for 10, 13, & 16 bit.
+--bin2bcd_10_4	Converts 10bit left shited binary to 4 digit BCD. Used for 10bit ADC data.
+--bin2bcd_13_4	Converts 13bit right shited binary to 4 digit BCD into a buffer[2].
+--bin2bcd_16_5	Converts 16bit right shited binary to 5 digit BCD into a buffer[3].
 
