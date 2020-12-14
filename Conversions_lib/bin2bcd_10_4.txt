@@ -1,0 +1,55 @@
+bin2bcd_10_4.txt
+21oct14 ndp
+13dec20
+
+Binary to BCD Conversion - 10 bit binary to 4 digit BCD
+
+Use Left justified 10 bit binary (ADLAR=0).
+Use R18:R17 for binary. Use X index to BCD.
+Use 2 bytes of RAM for binary. Use 4 bytes RAM for BCD. Max BCD = 1023.
+
+Algorythm
+Test if any nibble of >=5 is to be shifted, then add 3 to nibble.
+
+Detailed example: [HEX]0x7F -> [BCD]127
+Shift left
+    A           B
+    111         1111
+If A3:0 >= 0x05 add 0x03
+    1010        1111
+If A7:4 >= 0x50 add 0x30
+Shift left
+    10101       111
+If A3:0 >= 0x05 add 0x03
+    11000       111
+If A7:4 >= 0x50 add 0x30
+Shift left
+    110001      11
+If A3:0 >= 0x05 add 0x03
+If A7:4 >= 0x50 add 0x30
+Shift left
+    1100011     1
+If A3:0 >= 0x05 add 0x03
+If A7:4 >= 0x50 add 0x30
+    10010011    1
+Shift left
+    1 0010 0111
+Done
+A = 127 BCD
+
+General example: [10bit binary]11 11010111 -> [3byte BCD]983
+    11                11010111
+    111               1010111      add 3
+    1010              1010111
+    1 0101            010111       add 3
+    1 1000            010111
+    11 0000           10111
+    110 0001          0111         add 3
+    1001 0001         0111
+    1 0010 0010       111
+    10 0100 0101      11           add 3
+    10 0100 1000      11
+    100 1001 0001     1            add 3
+    100 1100 0001     1
+
+    1001 1000 0011

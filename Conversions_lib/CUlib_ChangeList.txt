@@ -1,0 +1,8 @@
+CUlib_ChangeList.rtf
+22oct14 ndp
+13dec20
+
+10-22-2014		Conversion_lib_Release_0
+bin2bcd_10_4	Converts 10bit left shited binary to 4 digit BCD. Used for 10bit ADC data.
+12-13-2020		Upgrade docs. Upgrade conversion_util.asm.
+
