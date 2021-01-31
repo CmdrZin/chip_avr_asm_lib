@@ -11,7 +11,7 @@ Use Right justified 13 and 16 bit binary for general conversion.
 
 void bin2bcd_10_4(uint16_t bin10val, uint8_t* bcdBuffer);	// for ADC buffer[2]
 void bin2bcd_13_4(uint16_t bin13val, uint8_t* bcdBuffer);	// buffer[2]
-void bin2bcd_16_4(uint16_t bin16val, uint8_t* bcdBuffer);	// buffer[3]
+void bin2bcd_16_5(uint16_t bin16val, uint8_t* bcdBuffer);	// buffer[3]
 
 Algorythm
 Test if any nibble of >=5 is to be shifted, then add 3 to nibble.

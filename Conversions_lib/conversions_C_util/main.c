@@ -33,7 +33,7 @@
 
 #include "conversion_C_util.h"
 
-uint8_t buf[2];
+uint8_t buf[3];
 
 int main(void)
 {
